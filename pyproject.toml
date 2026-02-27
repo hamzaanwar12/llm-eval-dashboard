@@ -1,0 +1,16 @@
+[project]
+name = "llmobs"
+version = "0.1.0"
+description = "Lightweight LLM observability + evals: trace calls (latency, tokens, cost, errors), LLM-as-judge scoring, dashboard."
+requires-python = ">=3.11"
+dependencies = ["anthropic>=1.1", "fastapi>=0.115", "uvicorn>=0.30"]
+
+[dependency-groups]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/llmobs"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
