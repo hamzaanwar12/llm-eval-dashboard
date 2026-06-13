@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>llmobs</title>
+<style>
+  :root{color-scheme:light dark}
+  body{font:15px/1.5 system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem}
+  table{border-collapse:collapse;width:100%;margin-bottom:2rem} th,td{padding:.4rem .6rem;border-bottom:1px solid #8884;text-align:left;vertical-align:top}
+  th{font-weight:600} td.n{text-align:right;font-variant-numeric:tabular-nums}
+  button{font:inherit;background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer;padding:0}
+  .muted{color:#888}
+</style>
+</head>
+<body>
+<h1>LLM observability</h1>
+<h2>Traces</h2><table id="traces"></table>
+<h2>Eval runs</h2><table id="runs"></table>
+<h2 id="casesTitle" hidden>Cases</h2><table id="cases"></table>
+<script>
+// all values are inserted with textContent: model outputs are untrusted
+function table(el, cols, rows, onRow) {
+  el.replaceChildren();
+  const tr = el.insertRow();
+  cols.forEach(([k, label]) => tr.append(Object.assign(document.createElement("th"), {textContent: label})));
+  if (!rows.length) { el.insertRow().insertCell().append(Object.assign(document.createElement("span"), {className: "muted", textContent: "No data yet"})); return; }
+  for (const r of rows) {
+    const row = el.insertRow();
+    cols.forEach(([k, , num]) => { const c = row.insertCell(); c.textContent = r[k] ?? ""; if (num) c.className = "n"; });
+    if (onRow) onRow(row, r);
+  }
+}
+const pctFmt = v => (v * 100).toFixed(1) + "%";
+async function load() {
+  const t = await (await fetch("/api/traces")).json();
+  table(document.getElementById("traces"),
+    [["name","Name"],["calls","Calls",1],["p50_ms","p50 ms",1],["p95_ms","p95 ms",1],["error_rate","Errors",1],["tokens","Tokens",1],["cost_usd","Cost $",1]],
+    t.map(r => ({...r, error_rate: pctFmt(r.error_rate)})));
+  const runs = await (await fetch("/api/evals")).json();
+  table(document.getElementById("runs"), [["run","Run"],["cases","Cases",1],["avg_score","Avg score",1],["pass_rate","Pass rate (≥4)",1]],
+    runs.map(r => ({...r, pass_rate: pctFmt(r.pass_rate)})),
+    (row, r) => { const b = Object.assign(document.createElement("button"), {textContent: r.run}); b.onclick = () => cases(r.run); row.cells[0].replaceChildren(b); });
+}
+async function cases(run) {
+  const rows = await (await fetch("/api/evals/" + encodeURIComponent(run))).json();
+  const h = document.getElementById("casesTitle"); h.hidden = false; h.textContent = "Cases — " + run + " (worst first)";
+  table(document.getElementById("cases"), [["case_id","Case"],["score","Score",1],["input","Input"],["output","Output"],["expected","Expected"],["reason","Judge reason"]], rows);
+}
+load();
+</script>
+</body>
+</html>

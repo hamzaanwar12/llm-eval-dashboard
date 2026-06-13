@@ -1,4 +1,5 @@
 """SQLite storage for traces and eval results, plus aggregate stats."""
+import math
 import sqlite3
 import threading
 
@@ -51,5 +52,5 @@ def pct(sorted_vals: list[float], p: int) -> float:
     """Nearest-rank percentile."""
     if not sorted_vals:
         return 0.0
-    k = max(0, min(len(sorted_vals) - 1, round(p / 100 * len(sorted_vals) + 0.5) - 1))
+    k = max(0, min(len(sorted_vals) - 1, math.ceil(p / 100 * len(sorted_vals)) - 1))
     return round(sorted_vals[k], 1)
